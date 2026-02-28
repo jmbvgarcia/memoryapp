@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Memory">
+  <title>Memory</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ── Review Screen ──────────────────────────────────────────────────── -->
+  <div id="screen-review" class="screen">
+    <div id="review-header">
+      <span id="review-counter"></span>
+    </div>
+    <div id="review-content">
+      <div id="card-area" hidden>
+        <div id="card-question"></div>
+        <hr id="card-divider" hidden>
+        <div id="card-answer" hidden></div>
+      </div>
+
+      <button id="btn-show-answer" class="btn-primary btn-large" hidden>Show Answer</button>
+
+      <div id="grade-area" hidden>
+        <button class="grade-btn grade-again" data-grade="again">
+          <span class="grade-name">Again</span>
+          <span class="grade-hint">Start over</span>
+        </button>
+        <button class="grade-btn grade-hard" data-grade="hard">
+          <span class="grade-name">Hard</span>
+          <span class="grade-hint">With effort</span>
+        </button>
+        <button class="grade-btn grade-good" data-grade="good">
+          <span class="grade-name">Good</span>
+          <span class="grade-hint">Normal recall</span>
+        </button>
+        <button class="grade-btn grade-easy" data-grade="easy">
+          <span class="grade-name">Easy</span>
+          <span class="grade-hint">Too easy</span>
+        </button>
+      </div>
+
+      <div id="empty-state" hidden>
+        <div class="empty-icon">✓</div>
+        <p class="empty-title">All done!</p>
+        <p class="empty-sub">Come back tomorrow.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Library Screen ─────────────────────────────────────────────────── -->
+  <div id="screen-library" class="screen">
+    <div class="screen-header">
+      <h2>Library</h2>
+    </div>
+    <div id="lib-filter-bar">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="due">Due</button>
+      <button class="filter-btn" data-filter="new">New</button>
+      <button class="filter-btn" data-filter="learning">Learning</button>
+      <button class="filter-btn" data-filter="mature">Mature</button>
+    </div>
+    <div id="lib-search-bar">
+      <input type="search" id="lib-search" placeholder="Search cards…" autocomplete="off">
+    </div>
+    <div id="tag-chips" hidden></div>
+    <div id="card-list"></div>
+  </div>
+
+  <!-- ── Add Card Screen ────────────────────────────────────────────────── -->
+  <div id="screen-add" class="screen">
+    <div class="screen-header">
+      <h2>Add Card</h2>
+    </div>
+    <form id="add-form" class="form-body">
+      <label class="field-label">
+        Question
+        <textarea id="new-q" rows="4" placeholder="What do you want to remember?" required></textarea>
+      </label>
+      <label class="field-label">
+        Answer
+        <textarea id="new-a" rows="4" placeholder="The answer…" required></textarea>
+      </label>
+      <label class="field-label">
+        Tags <span class="field-hint">(optional, comma-separated)</span>
+        <input type="text" id="new-tags" placeholder="e.g. Economics, History">
+      </label>
+      <button type="submit" class="btn-primary btn-large">Add Card</button>
+      <div id="add-success" hidden>Card added!</div>
+    </form>
+  </div>
+
+  <!-- ── Stats Screen ───────────────────────────────────────────────────── -->
+  <div id="screen-stats" class="screen">
+    <div class="screen-header">
+      <h2>Stats</h2>
+    </div>
+    <div id="stats-grid"></div>
+
+    <div class="section-title">Settings</div>
+    <div class="settings-section">
+      <label class="setting-row">
+        New cards per day
+        <input type="number" id="new-cards-input" min="1" max="200" value="20">
+      </label>
+    </div>
+
+    <div class="section-title">Data</div>
+    <div class="actions-section">
+      <button id="btn-export" class="btn-secondary">Export JSON</button>
+      <button id="btn-import" class="btn-secondary">Import JSON</button>
+      <input type="file" id="import-input" accept=".json" hidden>
+      <button id="btn-reset" class="btn-danger">Reset Everything</button>
+    </div>
+  </div>
+
+  <!-- ── Bottom Nav ─────────────────────────────────────────────────────── -->
+  <nav id="bottom-nav">
+    <button class="nav-btn active" data-nav="review">
+      <span class="nav-icon">📋</span>
+      <span>Review</span>
+    </button>
+    <button class="nav-btn" data-nav="library">
+      <span class="nav-icon">📚</span>
+      <span>Library</span>
+    </button>
+    <button class="nav-btn" data-nav="add">
+      <span class="nav-icon">➕</span>
+      <span>Add</span>
+    </button>
+    <button class="nav-btn" data-nav="stats">
+      <span class="nav-icon">📊</span>
+      <span>Stats</span>
+    </button>
+  </nav>
+
+  <script src="storage.js"></script>
+  <script src="scheduler.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

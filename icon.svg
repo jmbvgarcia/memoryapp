@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="42" fill="#2563eb"/>
+  <!-- Two stacked card shapes -->
+  <rect x="54" y="72" width="90" height="60" rx="8" fill="white" opacity="0.35"/>
+  <rect x="46" y="60" width="90" height="60" rx="8" fill="white"/>
+  <!-- M letter -->
+  <text
+    x="91" y="98"
+    font-family="-apple-system, system-ui, sans-serif"
+    font-size="34"
+    font-weight="800"
+    fill="#2563eb"
+    text-anchor="middle"
+    dominant-baseline="middle"
+  >M</text>
+</svg>
