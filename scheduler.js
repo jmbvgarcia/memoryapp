@@ -1,11 +1,13 @@
 const Scheduler = (() => {
 
-  function createCard(question, answer, tags = []) {
+  function createCard(question, answer, tags = [], questionImage = null, answerImage = null) {
     return {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       question,
       answer,
       tags,
+      questionImage,
+      answerImage,
       status: 'New',
       interval: 0,
       easeFactor: 2.5,

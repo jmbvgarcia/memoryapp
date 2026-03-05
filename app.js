@@ -6,7 +6,8 @@ let libSearch    = '';
 let libTagFilter = '';
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-function init() {
+async function init() {
+  await ImageStore.init();
   data = Storage.load();
   setupNav();
   setupReview();
@@ -41,6 +42,8 @@ function setupReview() {
     document.getElementById('card-divider').hidden = false;
     document.getElementById('btn-show-answer').hidden = true;
     document.getElementById('grade-area').hidden   = false;
+    const aImg = document.getElementById('card-answer-img');
+    if (aImg.dataset.hasImage === '1') aImg.hidden = false;
   });
 
   document.querySelectorAll('[data-grade]').forEach(btn => {
@@ -54,11 +57,13 @@ function renderReview() {
   showCard();
 }
 
-function showCard() {
+async function showCard() {
   const card      = reviewQueue[0];
   const counter   = document.getElementById('review-counter');
   const cardArea  = document.getElementById('card-area');
   const emptyState = document.getElementById('empty-state');
+  const qImg = document.getElementById('card-question-img');
+  const aImg = document.getElementById('card-answer-img');
 
   if (!card) {
     counter.textContent = '';
@@ -80,6 +85,19 @@ function showCard() {
   document.getElementById('grade-area').hidden         = true;
   cardArea.hidden  = false;
   emptyState.hidden = true;
+
+  // Show question image
+  if (card.questionImage) {
+    const url = await ImageStore.get(card.questionImage);
+    if (url) { qImg.src = url; qImg.hidden = false; } else { qImg.hidden = true; }
+  } else { qImg.hidden = true; qImg.src = ''; }
+
+  // Show answer image (hidden until answer revealed)
+  if (card.answerImage) {
+    const url = await ImageStore.get(card.answerImage);
+    if (url) { aImg.src = url; aImg.dataset.hasImage = '1'; } else { aImg.dataset.hasImage = ''; }
+  } else { aImg.dataset.hasImage = ''; aImg.src = ''; }
+  aImg.hidden = true;
 }
 
 function gradeCard(grade) {
@@ -167,23 +185,31 @@ function renderLibrary() {
       : card.question;
     const tags = card.tags.map(t => `<span class="tag-badge">${esc(t)}</span>`).join('');
     const interval = card.interval ? `<span class="interval-badge">${card.interval}d</span>` : '';
+    const hasImg = (card.questionImage || card.answerImage) ? '<span class="image-indicator">IMG</span>' : '';
     return `
       <div class="card-item" data-card-id="${card.id}">
         <div class="card-item-q">${esc(preview)}</div>
         <div class="card-item-meta">
           <span class="status-badge status-${card.status.toLowerCase()}">${card.status}</span>
           ${interval}
+          ${hasImg}
           ${tags}
         </div>
       </div>`;
   }).join('');
 }
 
-function openCardModal(id) {
+async function openCardModal(id) {
   const card = data.cards.find(c => c.id === id);
   if (!card) return;
 
   document.getElementById('card-modal')?.remove();
+
+  let modalQFile = null, modalAFile = null;
+  let removeQImg = false, removeAImg = false;
+
+  const qImgUrl = card.questionImage ? await ImageStore.get(card.questionImage) : null;
+  const aImgUrl = card.answerImage   ? await ImageStore.get(card.answerImage)   : null;
 
   const modal = document.createElement('div');
   modal.id = 'card-modal';
@@ -195,9 +221,25 @@ function openCardModal(id) {
       <label class="field-label">Question
         <textarea id="modal-q" rows="3">${esc(card.question)}</textarea>
       </label>
+      <div class="image-upload-row">
+        <button type="button" id="modal-btn-q-img" class="btn-secondary image-upload-btn">${qImgUrl ? 'Change Image' : 'Add Image'}</button>
+        <input type="file" id="modal-input-q-img" accept="image/*" hidden>
+        <div id="modal-preview-q" class="image-preview" ${qImgUrl ? '' : 'hidden'}>
+          <img id="modal-preview-q-el" ${qImgUrl ? `src="${qImgUrl}"` : ''}>
+          <button type="button" class="image-remove-btn" data-modal-clear="q">&times;</button>
+        </div>
+      </div>
       <label class="field-label">Answer
         <textarea id="modal-a" rows="3">${esc(card.answer)}</textarea>
       </label>
+      <div class="image-upload-row">
+        <button type="button" id="modal-btn-a-img" class="btn-secondary image-upload-btn">${aImgUrl ? 'Change Image' : 'Add Image'}</button>
+        <input type="file" id="modal-input-a-img" accept="image/*" hidden>
+        <div id="modal-preview-a" class="image-preview" ${aImgUrl ? '' : 'hidden'}>
+          <img id="modal-preview-a-el" ${aImgUrl ? `src="${aImgUrl}"` : ''}>
+          <button type="button" class="image-remove-btn" data-modal-clear="a">&times;</button>
+        </div>
+      </div>
       <label class="field-label">Tags (comma-separated)
         <input type="text" id="modal-tags" value="${esc(card.tags.join(', '))}">
       </label>
@@ -210,17 +252,73 @@ function openCardModal(id) {
     </div>`;
   document.body.appendChild(modal);
 
+  // Image upload handlers
+  modal.querySelector('#modal-btn-q-img').addEventListener('click', () => {
+    modal.querySelector('#modal-input-q-img').click();
+  });
+  modal.querySelector('#modal-input-q-img').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    modalQFile = file; removeQImg = false;
+    modal.querySelector('#modal-preview-q-el').src = URL.createObjectURL(file);
+    modal.querySelector('#modal-preview-q').hidden = false;
+    modal.querySelector('#modal-btn-q-img').textContent = 'Change Image';
+  });
+  modal.querySelector('#modal-btn-a-img').addEventListener('click', () => {
+    modal.querySelector('#modal-input-a-img').click();
+  });
+  modal.querySelector('#modal-input-a-img').addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    modalAFile = file; removeAImg = false;
+    modal.querySelector('#modal-preview-a-el').src = URL.createObjectURL(file);
+    modal.querySelector('#modal-preview-a').hidden = false;
+    modal.querySelector('#modal-btn-a-img').textContent = 'Change Image';
+  });
+
+  modal.querySelectorAll('[data-modal-clear]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.modalClear === 'q') {
+        modalQFile = null; removeQImg = true;
+        modal.querySelector('#modal-preview-q').hidden = true;
+        modal.querySelector('#modal-btn-q-img').textContent = 'Add Image';
+      } else {
+        modalAFile = null; removeAImg = true;
+        modal.querySelector('#modal-preview-a').hidden = true;
+        modal.querySelector('#modal-btn-a-img').textContent = 'Add Image';
+      }
+    });
+  });
+
   const close = () => modal.remove();
   modal.querySelector('.modal-backdrop').addEventListener('click', close);
   modal.querySelector('#modal-cancel').addEventListener('click', close);
 
-  modal.querySelector('#modal-save').addEventListener('click', () => {
+  modal.querySelector('#modal-save').addEventListener('click', async () => {
     const q = modal.querySelector('#modal-q').value.trim();
     const a = modal.querySelector('#modal-a').value.trim();
     if (!q || !a) return;
     const tags = modal.querySelector('#modal-tags').value.split(',').map(s => s.trim()).filter(Boolean);
     const idx  = data.cards.findIndex(c => c.id === card.id);
-    data.cards[idx] = { ...card, question: q, answer: a, tags };
+
+    let newQImg = card.questionImage;
+    let newAImg = card.answerImage;
+
+    if (modalQFile) {
+      if (card.questionImage) await ImageStore.del(card.questionImage);
+      newQImg = await ImageStore.save(modalQFile);
+    } else if (removeQImg && card.questionImage) {
+      await ImageStore.del(card.questionImage);
+      newQImg = null;
+    }
+
+    if (modalAFile) {
+      if (card.answerImage) await ImageStore.del(card.answerImage);
+      newAImg = await ImageStore.save(modalAFile);
+    } else if (removeAImg && card.answerImage) {
+      await ImageStore.del(card.answerImage);
+      newAImg = null;
+    }
+
+    data.cards[idx] = { ...card, question: q, answer: a, tags, questionImage: newQImg, answerImage: newAImg };
     Storage.save(data);
     close();
     renderLibrary();
@@ -229,7 +327,7 @@ function openCardModal(id) {
   modal.querySelector('#modal-reset').addEventListener('click', () => {
     if (!confirm("Reset this card's progress? It will start over as New.")) return;
     const idx   = data.cards.findIndex(c => c.id === card.id);
-    const reset = Scheduler.createCard(card.question, card.answer, card.tags);
+    const reset = Scheduler.createCard(card.question, card.answer, card.tags, card.questionImage, card.answerImage);
     reset.id    = card.id;
     data.cards[idx] = reset;
     Storage.save(data);
@@ -237,8 +335,10 @@ function openCardModal(id) {
     renderLibrary();
   });
 
-  modal.querySelector('#modal-delete').addEventListener('click', () => {
+  modal.querySelector('#modal-delete').addEventListener('click', async () => {
     if (!confirm('Delete this card? This cannot be undone.')) return;
+    if (card.questionImage) await ImageStore.del(card.questionImage);
+    if (card.answerImage)   await ImageStore.del(card.answerImage);
     data.cards = data.cards.filter(c => c.id !== card.id);
     Storage.save(data);
     close();
@@ -247,25 +347,83 @@ function openCardModal(id) {
 }
 
 // ─── Add Card ─────────────────────────────────────────────────────────────────
+let pendingQFile = null;
+let pendingAFile = null;
+
 function setupAddCard() {
   const form = document.getElementById('add-form');
   form.addEventListener('submit', handleAddCard);
   form.addEventListener('keydown', e => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleAddCard(e);
   });
+
+  // Question image
+  document.getElementById('btn-q-img').addEventListener('click', () => {
+    document.getElementById('input-q-img').click();
+  });
+  document.getElementById('input-q-img').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    pendingQFile = file;
+    const preview = document.getElementById('preview-q-img');
+    document.getElementById('preview-q-img-el').src = URL.createObjectURL(file);
+    preview.hidden = false;
+    document.getElementById('btn-q-img').textContent = 'Change Image';
+  });
+
+  // Answer image
+  document.getElementById('btn-a-img').addEventListener('click', () => {
+    document.getElementById('input-a-img').click();
+  });
+  document.getElementById('input-a-img').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    pendingAFile = file;
+    const preview = document.getElementById('preview-a-img');
+    document.getElementById('preview-a-img-el').src = URL.createObjectURL(file);
+    preview.hidden = false;
+    document.getElementById('btn-a-img').textContent = 'Change Image';
+  });
+
+  // Remove image buttons
+  document.querySelectorAll('.image-remove-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.clear === 'q') {
+        pendingQFile = null;
+        document.getElementById('input-q-img').value = '';
+        document.getElementById('preview-q-img').hidden = true;
+        document.getElementById('btn-q-img').textContent = 'Add Image';
+      } else {
+        pendingAFile = null;
+        document.getElementById('input-a-img').value = '';
+        document.getElementById('preview-a-img').hidden = true;
+        document.getElementById('btn-a-img').textContent = 'Add Image';
+      }
+    });
+  });
 }
 
-function handleAddCard(e) {
+async function handleAddCard(e) {
   e.preventDefault();
   const q = document.getElementById('new-q').value.trim();
   const a = document.getElementById('new-a').value.trim();
   if (!q || !a) return;
   const tags = document.getElementById('new-tags').value.split(',').map(s => s.trim()).filter(Boolean);
 
-  data.cards.push(Scheduler.createCard(q, a, tags));
+  let qImgKey = null, aImgKey = null;
+  if (pendingQFile) qImgKey = await ImageStore.save(pendingQFile);
+  if (pendingAFile) aImgKey = await ImageStore.save(pendingAFile);
+
+  data.cards.push(Scheduler.createCard(q, a, tags, qImgKey, aImgKey));
   Storage.save(data);
 
+  // Reset form and image state
   document.getElementById('add-form').reset();
+  pendingQFile = null; pendingAFile = null;
+  document.getElementById('preview-q-img').hidden = true;
+  document.getElementById('preview-a-img').hidden = true;
+  document.getElementById('btn-q-img').textContent = 'Add Image';
+  document.getElementById('btn-a-img').textContent = 'Add Image';
   document.getElementById('new-q').focus();
 
   const msg = document.getElementById('add-success');
@@ -276,7 +434,19 @@ function handleAddCard(e) {
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 function setupStats() {
-  document.getElementById('btn-export').addEventListener('click', Storage.exportJSON);
+  document.getElementById('btn-export').addEventListener('click', async () => {
+    const d = Storage.load();
+    const imageKeys = d.cards.flatMap(c => [c.questionImage, c.answerImage]).filter(Boolean);
+    const images = await ImageStore.exportAll(imageKeys);
+    const exportData = { ...d, _images: images };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `memoryapp-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
 
   document.getElementById('btn-import').addEventListener('click', () => {
     document.getElementById('import-input').click();
@@ -286,12 +456,20 @@ function setupStats() {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
-      if (Storage.importJSON(ev.target.result)) {
-        data = Storage.load();
-        renderStats();
-        alert('Import successful!');
-      } else {
+    reader.onload = async ev => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        const images = parsed._images || {};
+        delete parsed._images;
+        if (Storage.importJSON(JSON.stringify(parsed))) {
+          await ImageStore.importAll(images);
+          data = Storage.load();
+          renderStats();
+          alert('Import successful!');
+        } else {
+          alert('Import failed: invalid file format.');
+        }
+      } catch {
         alert('Import failed: invalid file format.');
       }
     };

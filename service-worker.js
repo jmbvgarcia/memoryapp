@@ -1,8 +1,9 @@
-const CACHE = 'memoryapp-v1';
+const CACHE = 'memoryapp-v2';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './imageStore.js',
   './storage.js',
   './scheduler.js',
   './app.js',

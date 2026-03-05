@@ -21,8 +21,10 @@
     <div id="review-content">
       <div id="card-area" hidden>
         <div id="card-question"></div>
+        <img id="card-question-img" class="card-image" hidden>
         <hr id="card-divider" hidden>
         <div id="card-answer" hidden></div>
+        <img id="card-answer-img" class="card-image" hidden>
       </div>
 
       <button id="btn-show-answer" class="btn-primary btn-large" hidden>Show Answer</button>
@@ -83,10 +85,26 @@
         Question
         <textarea id="new-q" rows="4" placeholder="What do you want to remember?" required></textarea>
       </label>
+      <div class="image-upload-row">
+        <button type="button" id="btn-q-img" class="btn-secondary image-upload-btn">Add Image</button>
+        <input type="file" id="input-q-img" accept="image/*" hidden>
+        <div id="preview-q-img" class="image-preview" hidden>
+          <img id="preview-q-img-el">
+          <button type="button" class="image-remove-btn" data-clear="q">&times;</button>
+        </div>
+      </div>
       <label class="field-label">
         Answer
         <textarea id="new-a" rows="4" placeholder="The answer…" required></textarea>
       </label>
+      <div class="image-upload-row">
+        <button type="button" id="btn-a-img" class="btn-secondary image-upload-btn">Add Image</button>
+        <input type="file" id="input-a-img" accept="image/*" hidden>
+        <div id="preview-a-img" class="image-preview" hidden>
+          <img id="preview-a-img-el">
+          <button type="button" class="image-remove-btn" data-clear="a">&times;</button>
+        </div>
+      </div>
       <label class="field-label">
         Tags <span class="field-hint">(optional, comma-separated)</span>
         <input type="text" id="new-tags" placeholder="e.g. Economics, History">
@@ -140,6 +158,7 @@
     </button>
   </nav>
 
+  <script src="imageStore.js"></script>
   <script src="storage.js"></script>
   <script src="scheduler.js"></script>
   <script src="app.js"></script>
